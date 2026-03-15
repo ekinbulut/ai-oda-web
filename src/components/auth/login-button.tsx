@@ -3,16 +3,14 @@
 import { Instagram, Lock, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 
 export function LoginButton() {
   const [status, setStatus] = useState<'idle' | 'loading'>('idle');
 
-  const handleInstagramLogin = async () => {
+  const handleInstagramLogin = () => {
     setStatus('loading');
-    // Real Instagram OAuth with NextAuth
-    // Callback URL will be /api/auth/callback/instagram by default
-    await signIn('instagram', { callbackUrl: '/onboard/analyze' });
+    // Go backend'deki OAuth başlangıç noktasına yönlendir
+    window.location.href = "https://amada-ludicrous-overstoutly.ngrok-free.dev/auth/instagram/login";
   };
 
   return (
