@@ -3,14 +3,22 @@
 import { Instagram, Lock, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 export function LoginButton() {
   const [status, setStatus] = useState<'idle' | 'loading'>('idle');
 
+  const { data: session } = useSession();
+
   const handleInstagramLogin = () => {
     setStatus('loading');
-    // Go backend'deki OAuth başlangıç noktasına yönlendir
-    window.location.href = "https://amada-ludicrous-overstoutly.ngrok-free.dev/auth/instagram/login";
+    
+    // Auth token'ı varsa URL'e ekle (Backend artik ?jwt=... bekliyor)
+    const baseUrl = "https://amada-ludicrous-overstoutly.ngrok-free.dev/auth/instagram/login";
+    const token = (session as any)?.accessToken;
+    
+    const finalUrl = token ? `${baseUrl}?jwt=${token}` : baseUrl;
+    window.location.href = finalUrl;
   };
 
   return (
