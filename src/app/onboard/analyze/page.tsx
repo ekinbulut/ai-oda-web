@@ -4,130 +4,184 @@ import { useAnalysisStatus } from "@/hooks/use-analysis-status";
 import { AnalysisStepper } from "@/components/onboard/analysis-stepper";
 import { TerminalLog } from "@/components/onboard/terminal-log";
 import { VisionPreview } from "@/components/onboard/vision-preview";
+import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
-import { Cpu, Zap, ArrowRight, Share2, Download } from "lucide-react";
+import { Cpu, ArrowRight, Share2, Download, Database, Image as ImageIcon, Feather, LayoutDashboard, Search, Settings } from "lucide-react";
 import Link from "next/link";
 
-export default function AnalyzePage() {
-  const { steps, currentStepIndex, isFinished } = useAnalysisStatus();
-  
-  const allLogs = steps.reduce((acc, step) => [...acc, ...step.logs], [] as string[]);
-  
-  return (
-    <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-        
-        {/* Left Side: Info & Stepper */}
-        <div className="lg:col-span-4 lg:sticky lg:top-32 space-y-8">
-          <div className="space-y-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs font-bold text-cyan-400 uppercase tracking-widest"
-            >
-              <Cpu className="w-3 h-3" />
-              {isFinished ? "Analiz Tamamlandı" : "Sistem Aktif (v4.2)"}
-            </motion.div>
-            
-            <h1 className="text-4xl font-black leading-tight tracking-tighter">
-              {isFinished ? (
-                <>Stratejiniz <br /><span className="text-green-400">Hazır!</span></>
-              ) : (
-                <>Ajanlar <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">Profilinizi Analiz Ediyor</span></>
-              )}
-            </h1>
-            
-            <p className="text-gray-400 font-medium leading-relaxed">
-              {isFinished 
-                ? "Profilinizdeki görsel ve etkileşim verileri optimize edildi. Aşağıdaki buton ile dağıtım asistanınızı aktif edebilirsiniz."
-                : "Yapay zeka modellerimiz paylaşımlarınızı, etkileşimlerinizi ve görsel dilinizi çözümlüyor. Bu işlem birkaç dakika sürebilir."}
-            </p>
-          </div>
+export default function AnalysisPage() {
+  const { progress, currentAgent, message, logs, isFinished } = useAnalysisStatus();
 
-          <AnalysisStepper steps={steps} currentIndex={currentStepIndex} />
-          
-          <AnimatePresence>
-            {isFinished && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="space-y-4 pt-4"
-              >
-                <Link
-                  href="/dashboard"
-                  className="flex items-center justify-center gap-2 w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-cyan-400 transition-colors group"
-                >
-                  DASHBOARD'A GİT
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <div className="grid grid-cols-2 gap-3">
-                  <button className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold hover:bg-white/10 transition-colors">
-                    <Download className="w-4 h-4" /> RAPOR İNDİR
-                  </button>
-                  <button className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold hover:bg-white/10 transition-colors">
-                    <Share2 className="w-4 h-4" /> PAYLAŞ
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
-          {!isFinished && (
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-cyan-900/20 to-black border border-cyan-500/10">
-              <div className="flex items-center gap-3 mb-2">
-                <Zap className="w-5 h-5 text-yellow-500" />
-                <span className="font-bold text-sm uppercase tracking-widest text-cyan-400">Otonom İşlem</span>
+  const agents = [
+    { name: "Stratejist", icon: Database, threshold: 33 },
+    { name: "Küratör", icon: ImageIcon, threshold: 66 },
+    { name: "Eleştirmen", icon: Feather, threshold: 99 },
+  ];
+
+  const uiSteps = [
+    { id: '1', label: 'Veri Senkronizasyonu', status: progress > 33 ? 'completed' : 'loading' },
+    { id: '2', label: 'Görsel Kategorizasyon', status: progress > 66 ? 'completed' : progress > 33 ? 'loading' : 'pending' },
+    { id: '3', label: 'Marka Tonu Analizi', status: progress === 100 ? 'completed' : progress > 66 ? 'loading' : 'pending' },
+  ];
+
+  return (
+    <div className="relative min-h-[calc(100vh-80px)] overflow-hidden">
+      
+      {/* 3. UX Dokunuşu: Skeleton Background Preview */}
+      <AnimatePresence>
+        {progress > 70 && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.15 }}
+            className="absolute inset-0 z-0 pointer-events-none p-12 overflow-hidden"
+          >
+            <div className="max-w-7xl mx-auto space-y-8">
+              <div className="flex gap-4">
+                <div className="w-1/4 h-64 bg-white/20 rounded-3xl" />
+                <div className="w-2/4 h-64 bg-white/20 rounded-3xl" />
+                <div className="w-1/4 h-64 bg-white/20 rounded-3xl" />
               </div>
-              <p className="text-[11px] text-gray-500 font-mono leading-relaxed lowercase">
-                [info] system is working in background. you don't need to keep this tab open, but we recommend watching the live feed.
-              </p>
+              <div className="h-96 bg-white/10 rounded-3xl" />
             </div>
-          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="relative z-10 max-w-6xl mx-auto px-6 py-12 space-y-12">
+        {/* Header Section */}
+        <div className="text-center space-y-4">
+          <motion.div 
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-bold text-cyan-400 uppercase tracking-[0.2em]"
+          >
+            <Cpu className="w-3 h-3 animate-spin-slow" />
+            {isFinished ? "SYSTEM READY" : "NEURAL PROCESSING ACTIVE"}
+          </motion.div>
+          
+          <h2 className="text-5xl font-black tracking-tighter text-white">
+            O.D.A Analiz Ediyor
+          </h2>
+          <p className="text-gray-400 text-lg font-medium max-w-xl mx-auto leading-relaxed">
+            {isFinished ? "Analiz tamamlandı. Taslak dashboard hazır." : message}
+          </p>
         </div>
 
-        {/* Right Side: Visuals & Logs */}
-        <div className="lg:col-span-8 space-y-8">
-          
-          {/* Top Panel: Vision Preview */}
-          <motion.div 
-            animate={!isFinished ? {
-              x: [0, -1, 1, -1, 1, 0],
-              y: [0, 1, -1, 1, -1, 0]
-            } : {}}
-            transition={{ duration: 0.2, repeat: Infinity, repeatType: "reverse", repeatDelay: Math.random() * 5 }}
-            className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md relative overflow-hidden group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <VisionPreview />
-          </motion.div>
+        {/* 2. UX Dokunuşu: Sequential Agent Icons */}
+        <div className="flex justify-center items-center gap-12 py-4">
+          {agents.map((agent, idx) => {
+            const isActive = currentAgent === agent.name;
+            const isDone = progress > agent.threshold;
+            const Icon = agent.icon;
 
-          {/* Bottom Panel: Terminal */}
-          <div className="h-[350px]">
-            <TerminalLog logs={allLogs} />
+            return (
+              <div key={agent.name} className="flex flex-col items-center gap-3">
+                <motion.div 
+                  animate={isActive ? { scale: [1, 1.1, 1], boxShadow: ["0 0 0px rgba(6,182,212,0)", "0 0 20px rgba(6,182,212,0.5)", "0 0 0px rgba(6,182,212,0)"] } : {}}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                  className={`p-5 rounded-2xl border-2 transition-all duration-500 shadow-2xl ${
+                    isDone ? "bg-cyan-500 border-cyan-500 text-black shadow-cyan-500/20" : 
+                    isActive ? "bg-cyan-500/20 border-cyan-500 text-cyan-400" : 
+                    "bg-white/5 border-white/10 text-gray-700"
+                  }`}
+                >
+                  <Icon className={`w-8 h-8 ${isActive ? "animate-pulse" : ""}`} />
+                </motion.div>
+                <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isActive ? "text-cyan-400" : isDone ? "text-white" : "text-gray-700"}`}>
+                  {agent.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Büyük Progress Bar */}
+        <div className="w-full space-y-3 bg-white/5 p-8 rounded-[2rem] border border-white/10 backdrop-blur-md">
+          <Progress value={progress} className="h-5" />
+          <div className="flex justify-between text-[11px] text-gray-500 font-mono tracking-widest uppercase font-bold px-1">
+            <span className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${isFinished ? "bg-green-500" : "bg-cyan-500 animate-ping"}`} />
+              {isFinished ? "STATUS: READY" : `LOGGING: ${currentAgent.toUpperCase()}_UNIT`}
+            </span>
+            <span className="text-cyan-400 tracking-tighter">{Math.floor(progress)}% OPTIMIZED</span>
+          </div>
+        </div>
+
+        {/* Ana İçerik Izgarası */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+          
+          {/* Middle: Vision Preview */}
+          <div className="md:col-span-8 space-y-8">
+            <div className="p-8 bg-black/40 border border-white/10 rounded-3xl backdrop-blur-xl relative overflow-hidden group">
+               <VisionPreview />
+            </div>
+            
+            {/* 1. UX Dokunuşu: Terminal Log (Technical lines) */}
+            <div className="h-[250px]">
+              <TerminalLog logs={logs} />
+            </div>
           </div>
 
-          {/* Progress Indicator */}
-          <div className="flex flex-col gap-4 p-6 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
+          {/* Right: Sidebar Stepper & Final Actions */}
+          <div className="md:col-span-4 space-y-6">
+            <AnalysisStepper steps={uiSteps as any} currentIndex={Math.floor(progress / 33.3)} />
+            
+            <AnimatePresence>
+              {isFinished && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center justify-center gap-3 w-full py-5 bg-white text-black font-black rounded-2xl hover:bg-cyan-400 transition-all shadow-2xl relative overflow-hidden group"
+                  >
+                    <LayoutDashboard className="w-5 h-5" />
+                    DASHBOARD'A GİT
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button className="flex items-center justify-center gap-2 py-4 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black hover:bg-white/10 transition-colors text-white uppercase tracking-widest">
+                      <Download className="w-4 h-4" /> RAPOR
+                    </button>
+                    <button className="flex items-center justify-center gap-2 py-4 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black hover:bg-white/10 transition-colors text-white uppercase tracking-widest">
+                      <Share2 className="w-4 h-4" /> PAYLAŞ
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {!isFinished && (
-              <motion.div 
-                animate={{ x: ["-100%", "100%"] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="absolute top-0 left-0 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent"
-              />
+              <div className="p-6 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 space-y-4">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                  <Settings className="w-4 h-4 text-cyan-400 animate-spin-slow" />
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Sistem Konfigürasyonu</span>
+                </div>
+                <div className="space-y-2">
+                   <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-gray-600">GPU Acceleration</span>
+                      <span className="text-green-500 text-[8px]">ACTIVE</span>
+                   </div>
+                   <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-gray-600">Model Precision</span>
+                      <span className="text-cyan-500 text-[8px]">FLOAT16</span>
+                   </div>
+                </div>
+              </div>
             )}
-            <div className="flex justify-between items-center px-1">
-              <div className="text-xs font-mono text-gray-400 uppercase tracking-widest shrink-0">Neural Strategy Sync</div>
-              <div className="text-xs font-mono text-cyan-500">{isFinished ? "100%" : `${Math.min(99, Math.floor((currentStepIndex / steps.length) * 100))}%`}</div>
-            </div>
-            <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-              <motion.div 
-                animate={{ width: isFinished ? "100%" : `${((currentStepIndex + 0.5) / steps.length) * 100}%` }}
-                className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 shadow-[0_0_15px_rgba(6,182,212,0.5)]"
-              />
-            </div>
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 8s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }

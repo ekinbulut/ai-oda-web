@@ -2,93 +2,106 @@
 
 import { useState, useEffect } from 'react';
 
-export type AnalysisStep = {
-  id: string;
-  label: string;
-  status: 'pending' | 'loading' | 'completed' | 'error';
+export type AnalysisStatus = {
+  progress: number;
+  currentAgent: string;
+  message: string;
   logs: string[];
+  isFinished: boolean;
 };
 
-const AGENT_TASKS = [
+const AGENTS = [
+  { name: "Stratejist", icon: "database", initialMsg: "Instagram veritabanı senkronizasyonu başlatıldı..." },
+  { name: "Küratör", icon: "image", initialMsg: "Görsel varlıklar ayrıştırılıyor ve kategorize ediliyor..." },
+  { name: "Eleştirmen", icon: "feather", initialMsg: "Marka dili ve estetik bütünlük analizi yapılıyor..." }
+];
+
+const LOG_CHUNKS = [
   [
-    "Instagram API handshaking initiated...",
-    "Access tokens validated. Scope: [profile, media]",
-    "Fetching media metadata for last 30 days...",
-    "User profile weight calculated: 0.84",
-    "Session established on agent worker #4"
+    "[FETCH] Accessing Meta Graph API v18.0...",
+    "[AUTH] Token validation: SUCCESS",
+    "[DATA] Last 50 media items indexed",
+    "[ANALYSIS] Follower growth delta: +4.2%",
+    "[SYSTEM] Stratejist data retrieval complete."
   ],
   [
-    "Vision model (ViT-L/14) loading into memory...",
-    "Scanning media ID: 192837465 - Detected: [Lifestyle, Tech]",
-    "Object detection active - Consistency score: 94%",
-    "Color palette extracted: #030303, #06b6d4, #a855f7",
-    "Scene recognition completed for 12 nodes"
+    "[VISION] Image #104 detected: 'Minimalist Interior'",
+    "[VISION] Image #103 detected: 'Tech Workspace'",
+    "[KÜRATÖR] Dominant color palette: #121212 | #06b6d4",
+    "[VISION] Scene consistency: 98.4%",
+    "[SYSTEM] Küratör visual classification complete."
   ],
   [
-    "Engagement rate cross-normalization started...",
-    "Analyzing comment sentiment indices...",
-    "Peak activity detected: Thursday 19:45 (Local Time)",
-    "Audience retention graph generated",
-    "Cross-referencing with global distribution nodes..."
-  ],
-  [
-    "Aggregating insights for final decision model...",
-    "Optimization parameters: MAXIMUM_REACH, HIGH_RETAIN",
-    "Generating 7-day content distribution map...",
-    "Strategy weighting applied (Factor: 1.4)",
-    "O.D.A strategy model compiled successfully."
+    "[TONE] Brand personality identified: 'Professional & Innovator'",
+    "[LANGUAGE] Caption sentiment: Positive (89%)",
+    "[CRITIC] Brand-voice alignment score: 7.4/10",
+    "[OPTIMIZATION] Content gap identified: Tuesday 18:00",
+    "[SUCCESS] Final strategy model finalized by Eleştirmen."
   ]
 ];
 
 export function useAnalysisStatus() {
-  const [steps, setSteps] = useState<AnalysisStep[]>([
-    { id: '1', label: 'Profil Erişimi', status: 'pending', logs: [] },
-    { id: '2', label: 'Görsel Analizi (Vision AI)', status: 'pending', logs: [] },
-    { id: '3', label: 'Etkileşim Verileri', status: 'pending', logs: [] },
-    { id: '4', label: 'Strateji Oluşturma', status: 'pending', logs: [] },
-  ]);
-
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [isFinished, setIsFinished] = useState(false);
+  const [status, setStatus] = useState<AnalysisStatus>({
+    progress: 0,
+    currentAgent: AGENTS[0].name,
+    message: AGENTS[0].initialMsg,
+    logs: [`> [SYSTEM] O.D.A Ana bilgisayarına bağlanıldı.`],
+    isFinished: false
+  });
 
   useEffect(() => {
-    if (isFinished) return;
-
+    let currentAgentIdx = 0;
+    let logIdx = 0;
+    
     const interval = setInterval(() => {
-      setSteps((prev) => {
-        const newSteps = [...prev];
-        const currentStep = newSteps[currentStepIndex];
-
-        if (!currentStep) return prev;
-
-        const stageLogs = AGENT_TASKS[currentStepIndex];
-
-        if (currentStep.status === 'pending') {
-          currentStep.status = 'loading';
-          currentStep.logs.push(`> [SYSTEM] Initializing ${currentStep.label}...`);
-        } else if (currentStep.status === 'loading') {
-          const currentLogCount = currentStep.logs.length - 1; // subtract system init log
-          
-          if (currentLogCount < stageLogs.length) {
-            currentStep.logs.push(`> [AGENT] ${stageLogs[currentLogCount]}`);
-          } else {
-            currentStep.status = 'completed';
-            currentStep.logs.push(`> [SUCCESS] ${currentStep.label} analysis complete.`);
-            
-            if (currentStepIndex < steps.length - 1) {
-              setCurrentStepIndex(currentStepIndex + 1);
-            } else {
-              setIsFinished(true);
-            }
-          }
+      setStatus(prev => {
+        if (prev.isFinished) {
+          clearInterval(interval);
+          return prev;
         }
 
-        return [...newSteps];
+        const newLogs = [...prev.logs];
+        // Slower at the end to build anticipation
+        let increment = prev.progress < 80 ? 1.5 : 0.8;
+        let nextProgress = Math.min(100, prev.progress + increment);
+        let nextAgent = prev.currentAgent;
+        let nextMessage = prev.message;
+        let nextFinished = false;
+
+        // Log ekleme mantığı
+        if (logIdx < LOG_CHUNKS[currentAgentIdx].length && Math.random() > 0.3) {
+          newLogs.push(`> ${LOG_CHUNKS[currentAgentIdx][logIdx]}`);
+          logIdx++;
+        }
+
+        // Ajan değiştirme (3 ajan var, her biri ~33% progress)
+        const threshold = (currentAgentIdx + 1) * 33.3;
+        if (nextProgress >= threshold && currentAgentIdx < AGENTS.length - 1) {
+          currentAgentIdx++;
+          logIdx = 0;
+          nextAgent = AGENTS[currentAgentIdx].name;
+          nextMessage = AGENTS[currentAgentIdx].initialMsg;
+          newLogs.push(`> [SYSTEM] Transitioning to: ${nextAgent}...`);
+        }
+
+        if (nextProgress >= 100) {
+          nextFinished = true;
+          newLogs.push(`> [SYSTEM] O.D.A Ready. Launching dashboard.`);
+        }
+
+        return {
+          ...prev,
+          progress: nextProgress,
+          currentAgent: nextAgent,
+          message: nextMessage,
+          logs: newLogs,
+          isFinished: nextFinished
+        };
       });
-    }, 1200);
+    }, 800);
 
     return () => clearInterval(interval);
-  }, [currentStepIndex, steps.length, isFinished]);
+  }, []);
 
-  return { steps, currentStepIndex, isFinished };
+  return status;
 }
